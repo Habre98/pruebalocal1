@@ -611,13 +611,6 @@ class UnifiedMentionProcessor:
     async def _handle_link_command(self, tweet, users_dict, match):
         """Handle account linking"""
         code = match.group(1)
-        link_codes = self.context.bot_data.get(LINK_CODES_KEY, {})
-        telegram_user_id = link_codes.get(code)
-
-        if not telegram_user_id:
-            print(f"⚠️ Código de vinculación no válido: {code}")
-            return
-
         author_id = tweet.author_id
         author = users_dict.get(author_id)
         username = (
@@ -625,10 +618,22 @@ class UnifiedMentionProcessor:
             if author and hasattr(author, "username")
             else str(author_id)
         )
+        print(f"[LINK_DEBUG] _handle_link_command triggered. Code: {code}, Author ID: {author_id}, Username: {username}")
+
+        link_codes = self.context.bot_data.get(LINK_CODES_KEY, {})
+        telegram_user_id = link_codes.get(code)
+        print(f"[LINK_DEBUG] Telegram User ID from code '{code}': {telegram_user_id}")
+
+        if not telegram_user_id:
+            print(f"[LINK_DEBUG] Invalid or used code detected: {code}")
+            print(f"⚠️ Código de vinculación no válido: {code}")
+            return
 
         linked_accounts = load_linked_accounts()
+        print(f"[LINK_DEBUG] Checking username '{username}'. Current linked_accounts: {linked_accounts}")
 
         if username in linked_accounts:
+            print(f"[LINK_DEBUG] Account already linked for username '{username}' to Telegram ID '{linked_accounts[username]}'")
             print(f"✅ Usuario @{username} ya vinculado")
             try:
                 await self.bot.send_message(
@@ -636,22 +641,27 @@ class UnifiedMentionProcessor:
                     text=f"ℹ️ Tu cuenta @{username} ya está vinculada.",
                 )
             except Exception as e:
+                print(f"[LINK_DEBUG] Error sending 'already linked' message: {e}")
                 print(f"❌ Error enviando mensaje de cuenta ya vinculada: {e}")
             return
 
+        print(f"[LINK_DEBUG] Establishing new link for username '{username}' to Telegram ID '{telegram_user_id}'")
         # Link the account
         linked_accounts[username] = str(telegram_user_id)
         save_linked_accounts(linked_accounts)
         del link_codes[code]
         self.context.bot_data[LINK_CODES_KEY] = link_codes
+        print(f"[LINK_DEBUG] Account for '{username}' saved and code '{code}' deleted.")
 
         try:
+            print(f"[LINK_DEBUG] Sending success message to Telegram ID '{telegram_user_id}' for username '{username}'")
             await self.bot.send_message(
                 chat_id=telegram_user_id,
                 text=f"✅ Cuenta vinculada exitosamente!\n🐦 X: @{username}\n📱 Telegram: Usuario vinculado",
             )
             print(f"🔗 Vinculación exitosa: @{username} ↔ Telegram {telegram_user_id}")
         except Exception as e:
+            print(f"[LINK_DEBUG] Error sending success confirmation message: {e}")
             print(f"❌ Error enviando confirmación de vinculación: {e}")
 
     async def _handle_snipe_command(self, tweet, users_dict, match, is_auto=False):
@@ -758,12 +768,16 @@ class UnifiedMentionProcessor:
             #     id=self.context.bot_data["xeroAi_bot_user_id"],
             #     since_id=last_seen_id,
             #     tweet_fields=["author_id", "created_at"],
-            #     expansions=["author_id"],
-            #     max_results=100,
-            # )
             response = self.client.get_users_mentions(
-                id=self.context.bot_data["xeroAi_bot_user_id"], max_results=100
-            )  # ✅ No since_id
+                id=self.context.bot_data["xeroAi_bot_user_id"],
+                since_id=last_seen_id,
+                tweet_fields=["author_id", "created_at"],
+                expansions=["author_id"],
+                max_results=100,
+            )
+            # response = self.client.get_users_mentions(
+            #     id=self.context.bot_data["xeroAi_bot_user_id"], max_results=100
+            # )  # ✅ No since_id
             print(response.data)
 
             if response.data:
@@ -818,21 +832,10 @@ async def unified_mention_loop(client: Client, bot: Bot, context):
                         else {}
                     )
 
-                    # Update last seen ID
-                    new_last_seen_id = last_seen_id
-                    for tweet in response.data:
-                        if not new_last_seen_id or int(tweet.id) > new_last_seen_id:
-                            new_last_seen_id = int(tweet.id)
-
                     # Process all mentions in parallel
                     await processor.process_mention_batch(
                         list(reversed(response.data)), users
                     )
-
-                    # Save progress
-                    if new_last_seen_id and new_last_seen_id != last_seen_id:
-                        save_last_seen_id(new_last_seen_id)
-                        last_seen_id = new_last_seen_id
 
                 # Reset error counter on success
                 consecutive_errors = 0

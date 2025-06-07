@@ -30,7 +30,7 @@ async def linkx_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-LINKED_ACCOUNTS_FILE = "linked_accounts.json"
+LINKED_ACCOUNTS_FILE = os.path.join("data", "linked_accounts.json")
 
 
 def load_linked_accounts() -> dict:
