@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+bot_data.pickle
+data/last_seen_id.txt
+data/linked_accounts.json
+ninmal_quote_test.py
+venv
+sniping_jupiter.py
