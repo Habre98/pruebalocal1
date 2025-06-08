@@ -21,16 +21,21 @@ async def linkx_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     link_codes[code] = user_id
     context.bot_data[LINK_CODES_KEY] = link_codes
 
+    bot_x_username = context.bot_data.get("xeroAi_bot_username")
+    if not bot_x_username:
+        bot_x_username = "YOUR_BOT_X_HANDLE"  # Or any other suitable placeholder
+        print("[WARNING] Bot X username not found in bot_data. Using placeholder in /linkx message.")
+
     await context.bot.send_message(
         chat_id=user_id,
         text=f"🔗 Para vincular tu cuenta de X, comenta lo siguiente en un tweet con tu cuenta de X:\n\n"
-        f"`@XeroAi_sol link {code}`\n\n"
+        f"`@{bot_x_username} link {code}`\n\n"
         f"Una vez detectado, te confirmaré aquí que tu cuenta ha sido vinculada.",
         parse_mode="Markdown",
     )
 
 
-LINKED_ACCOUNTS_FILE = "linked_accounts.json"
+LINKED_ACCOUNTS_FILE = os.path.join("data", "linked_accounts.json")
 
 
 def load_linked_accounts() -> dict:
