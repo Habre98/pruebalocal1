@@ -3,27 +3,6 @@ from mention_linker import mention_polling_loop
 import tweepy  # type: ignore
 
 
-# async def fetch_bot_x_id(context):
-#     twitter_client = context.bot_data.get("twitter_client")
-#     if not twitter_client:
-#         print("❌ Twitter client no está en context.bot_data")
-#         return
-
-#     try:
-#         user_data = twitter_client.get_user(username="xeroai_sol")
-#         if user_data.data:
-#             context.bot_data["xeroai_sol_user_id"] = user_data.data["id"]
-#             print(f"✅ ID del bot de X: {user_data.data['id']}")
-#         else:
-#             print("❌ No se pudo obtener el ID del bot de X")
-#     except tweepy.TooManyRequests as e_rate_limit:
-#         print(
-#             f"CRITICAL: Rate limit hit while fetching bot's own X ID (xeroAi_sol) in x_utils.py: {e_rate_limit}. This may affect bot functionality."
-#         )
-#     except Exception as e:
-#         print(f"❌ Error fetching bot's X ID: {e}")
-
-
 async def fetch_bot_x_id(context):
     try:
         # Our main account
