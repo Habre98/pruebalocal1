@@ -589,32 +589,25 @@ class UnifiedMentionProcessor:
     async def _process_single_mention(self, tweet, users_dict):
         """Process a single mention with all command types"""
         try:
-            tweet_text = tweet.text
-            print(f"📝 Procesando mención: {tweet_text}")
+            ref_tweets_info = [(rt.type, rt.id) for rt in tweet.referenced_tweets] if tweet.referenced_tweets else None
+            print(f"[RAW_MENTION_DEBUG] Processing mention ID {tweet.id}. Raw text: '{tweet.text}'. Referenced tweets: {ref_tweets_info}")
+            
+            tweet_text = tweet.text # Ensure tweet_text is defined
 
             # Check for different command patterns
             link_match = LINK_PATTERN.search(tweet_text)
-            # snipe_match = SNIPE_PATTERN.search(tweet_text) # Old pattern
-            # buy_match = BUY_PATTERN.search(tweet_text) # Old pattern
-            snipe_reply_match = self.SNIPE_REPLY_PATTERN.search(tweet_text)
+            
+            snipe_reply_match = SNIPE_REPLY_PATTERN.search(tweet_text)
 
             if link_match:
                 await self._handle_link_command(tweet, users_dict, link_match)
-            elif snipe_reply_match: # New condition
+            elif snipe_reply_match:
                 await self._handle_snipe_reply_command(tweet, users_dict, snipe_reply_match)
-            # elif snipe_match: # Old handler
-            #     await self._handle_snipe_command(
-            #         tweet, users_dict, snipe_match, is_auto=False
-            #     )
-            # elif buy_match: # Old handler
-            #     await self._handle_snipe_command(
-            #         tweet, users_dict, buy_match, is_auto=True
-            #     )
             else:
                 print(f"⚠️ Mención sin comando reconocido: {tweet_text}")
 
         except Exception as e:
-            print(f"❌ Error procesando mención {tweet.id}: {e}")
+            print(f"❌ Error procesando mención ID {tweet.id}: {e}")
             traceback.print_exc()
 
     async def _handle_link_command(self, tweet, users_dict, match):
@@ -766,18 +759,17 @@ class UnifiedMentionProcessor:
 
     async def _handle_snipe_reply_command(self, tweet, users_dict, match):
         print(f"[SNIPE_REPLY_DEBUG] _handle_snipe_reply_command triggered for tweet: {tweet.text}")
-        
+    
         # 1. Get Telegram User ID of the mentioner
         author_id = tweet.author_id
         author = users_dict.get(author_id)
         x_username = author.username.lower() if author and hasattr(author, "username") else str(author_id)
-        
-        current_linked_accounts = load_linked_accounts() # Ensure this function is accessible
+    
+        current_linked_accounts = load_linked_accounts()
         telegram_user_id_str = current_linked_accounts.get(x_username)
 
         if not telegram_user_id_str:
             print(f"[SNIPE_REPLY_DEBUG] User @{x_username} (Telegram ID unknown) is not linked. Ignoring snipe command.")
-            # Optionally, send a message to the author if you can get their Telegram ID via other means, or just log.
             return
 
         try:
@@ -794,32 +786,45 @@ class UnifiedMentionProcessor:
                     parent_tweet_id = ref_tweet.id
                     break
         
-        if not parent_tweet_id:
-            await self.bot.send_message(chat_id=telegram_user_id, text="ℹ️ This snipe command must be used by replying to the tweet containing the token address.")
-            return
-
-        # 3. Fetch parent tweet
-        try:
-            print(f"[SNIPE_REPLY_DEBUG] Fetching parent tweet ID: {parent_tweet_id}")
-            # Ensure self.client is the Tweepy API v2 client
-            parent_tweet_response = self.client.get_tweet(id=parent_tweet_id, tweet_fields=["text"]) 
-            if not parent_tweet_response.data or not parent_tweet_response.data.text:
-                await self.bot.send_message(chat_id=telegram_user_id, text="❌ Could not fetch or find text in the replied-to tweet.")
+        contract_address = None
+        
+        # Case 1: Reply-based snipe (original functionality)
+        if parent_tweet_id:
+            # 3. Fetch parent tweet
+            try:
+                print(f"[SNIPE_REPLY_DEBUG] Fetching parent tweet ID: {parent_tweet_id}")
+                parent_tweet_response = self.client.get_tweet(id=parent_tweet_id, tweet_fields=["text"]) 
+                if not parent_tweet_response.data or not parent_tweet_response.data.text:
+                    await self.bot.send_message(chat_id=telegram_user_id, text="❌ Could not fetch or find text in the replied-to tweet.")
+                    return
+                parent_tweet_text = parent_tweet_response.data.text
+                print(f"[SNIPE_REPLY_DEBUG] Parent tweet text: {parent_tweet_text}")
+            except Exception as e:
+                print(f"[SNIPE_REPLY_DEBUG] Error fetching parent tweet: {e}")
+                await self.bot.send_message(chat_id=telegram_user_id, text="❌ Error fetching the replied-to tweet.")
                 return
-            parent_tweet_text = parent_tweet_response.data.text
-            print(f"[SNIPE_REPLY_DEBUG] Parent tweet text: {parent_tweet_text}")
-        except Exception as e:
-            print(f"[SNIPE_REPLY_DEBUG] Error fetching parent tweet: {e}")
-            await self.bot.send_message(chat_id=telegram_user_id, text="❌ Error fetching the replied-to tweet.")
-            return
 
-        # 4. Extract CA from parent tweet
-        ca_match = SOL_ADDRESS_REGEX.search(parent_tweet_text)
-        if not ca_match:
-            await self.bot.send_message(chat_id=telegram_user_id, text="❌ No Solana token address found in the replied-to tweet.")
-            return
-        contract_address = ca_match.group(0)
-        print(f"[SNIPE_REPLY_DEBUG] Found CA: {contract_address} in parent tweet.")
+            # 4. Extract CA from parent tweet
+            ca_match = SOL_ADDRESS_REGEX.search(parent_tweet_text)
+            if not ca_match:
+                await self.bot.send_message(chat_id=telegram_user_id, text="❌ No Solana token address found in the replied-to tweet.")
+                return
+            contract_address = ca_match.group(0)
+            print(f"[SNIPE_REPLY_DEBUG] Found CA: {contract_address} in parent tweet.")
+        
+        # Case 2: Direct mention with CA in the same tweet
+        else:
+            # Try to extract CA from the current tweet
+            ca_match = SOL_ADDRESS_REGEX.search(tweet.text)
+            if ca_match:
+                contract_address = ca_match.group(0)
+                print(f"[SNIPE_REPLY_DEBUG] Found CA: {contract_address} in current tweet.")
+            else:
+                await self.bot.send_message(
+                    chat_id=telegram_user_id, 
+                    text="ℹ️ Please either:\n1. Reply to a tweet containing the token address, or\n2. Include the token address in your snipe command"
+                )
+                return
 
         # 5. Extract Amount from mention
         amount_str = match.group(1)
@@ -833,16 +838,13 @@ class UnifiedMentionProcessor:
         print(f"[SNIPE_REPLY_DEBUG] User @{x_username} (TG: {telegram_user_id}) wants to snipe {contract_address} with {amount} SOL.")
 
         # 6. Perform the snipe
-        selected_keypairs = load_user_wallets(str(telegram_user_id)) # Assumes load_user_wallets takes string TG ID
+        selected_keypairs = load_user_wallets(str(telegram_user_id))
         if not selected_keypairs:
             await self.bot.send_message(chat_id=telegram_user_id, text="⚠️ You have no wallets selected for sniping. Please add or select wallets.")
             return
-
+        
         await self.bot.send_message(chat_id=telegram_user_id, text=f"🎯 Sniping {amount} SOL for token {contract_address}...")
         try:
-            # Note: Ensure perform_sniping is awaitable or run in executor if it's blocking
-            # The original perform_sniping in x_monitor.py was async.
-            # Assuming perform_sniping signature: (telegram_user_id_str, contract_address, keypairs, amount_sol)
             sniping_result = await perform_sniping(str(telegram_user_id), contract_address, selected_keypairs, amount)
             await self.bot.send_message(chat_id=telegram_user_id, text=sniping_result)
         except Exception as e:

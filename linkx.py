@@ -24,7 +24,7 @@ async def linkx_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(
         chat_id=user_id,
         text=f"🔗 Para vincular tu cuenta de X, comenta lo siguiente en un tweet con tu cuenta de X:\n\n"
-        f"`@XeroAi_sol link {code}`\n\n"
+        f"`@xeroAi_bot link {code}`\n\n"
         f"Una vez detectado, te confirmaré aquí que tu cuenta ha sido vinculada.",
         parse_mode="Markdown",
     )

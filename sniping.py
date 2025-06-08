@@ -533,13 +533,13 @@ SOLANA_RPC_URL = "https://api.mainnet-beta.solana.com"
 async_solana_client = AsyncClient(SOLANA_RPC_URL)
 
 
-async def keypair_for_jup_access(user_id: int) -> Keypair:
-    """Use a fixed raw base58 private key."""
-    raw_key = "2m9FwarnAA8tgHzzBRQyFUcqoq2e5h1EDYWAemmppKPaCqpNFxDhcCYVu4dmdij1hJ7Q4RFSkAdk1ekSuFT5PWkT"  # Replace with actual valid key
-    decoded_key = base58.b58decode(raw_key)
-    if not (32 <= len(decoded_key) <= 64):
-        raise ValueError(f"Invalid key length: {len(decoded_key)} (Expected 32 or 64)")
-    return Keypair.from_bytes(decoded_key)
+# async def keypair_for_jup_access(user_id: int) -> Keypair:
+#     """Use a fixed raw base58 private key."""
+#     raw_key = "2m9FwarnAA8tgHzzBRQyFUcqoq2e5h1EDYWAemmppKPaCqpNFxDhcCYVu4dmdij1hJ7Q4RFSkAdk1ekSuFT5PWkT"  # Replace with actual valid key
+#     decoded_key = base58.b58decode(raw_key)
+#     if not (32 <= len(decoded_key) <= 64):
+#         raise ValueError(f"Invalid key length: {len(decoded_key)} (Expected 32 or 64)")
+#     return Keypair.from_bytes(decoded_key)
 
 
 async def load_user_private_keys(user_id: int, max_wallets: int = 5) -> list[str]:
@@ -562,15 +562,15 @@ async def load_user_private_keys(user_id: int, max_wallets: int = 5) -> list[str
     return private_keys
 
 
-async def initialize_jupiter_client(user_id: int) -> Jupiter:
-    keypair = await keypair_for_jup_access(user_id)
-
-    return Jupiter(
-        async_client=async_solana_client,
-        keypair=keypair,
-        quote_api_url="https://quote-api.jup.ag/v6/quote",  # NO trailing '?'
-        swap_api_url="https://quote-api.jup.ag/v6/swap",
-    )
+# async def initialize_jupiter_client(user_id: int) -> Jupiter:
+#     keypair = await keypair_for_jup_access(user_id)
+#
+#     return Jupiter(
+#         async_client=async_solana_client,
+#         keypair=keypair,
+#         quote_api_url="https://quote-api.jup.ag/v6/quote",  # NO trailing '?'
+#         swap_api_url="https://quote-api.jup.ag/v6/swap",
+#     )
 
 
 async def get_sol_balance(pubkey: Pubkey, rpc_url: str = SOLANA_RPC_URL) -> int:
@@ -638,6 +638,7 @@ async def perform_sniping(
     print(f"🎯 Iniciando sniping para contrato: {contract_address}")
 
     best_wallet = await get_highest_balance_wallet(keypairs)
+    logger.info(f"Sniping attempt: User's best_wallet selected for Jupiter ops: {best_wallet.pubkey()}")
     user_pubkey = best_wallet.pubkey()
     amount_lamports = int(amount_sol * 1_000_000_000)
 
@@ -832,6 +833,7 @@ async def perform_sniping(
                 base64.b64decode(transaction_data_base64)
             )
 
+            logger.info(f"Sniping attempt: Signing transaction with wallet: {best_wallet.pubkey()}")
             signed_tx = VersionedTransaction(versioned_tx.message, [best_wallet])
 
             print("📤 Enviando transacción a la red...")
@@ -880,7 +882,7 @@ async def message_for_user(user_id, amount, tx_hash, user_pubkey, contract_addre
 # /////////////////////////////////////////
 
 
-async def mock_bot():
+#async def mock_bot():
     raw_key = base58.b58decode(
         "2m9FwarnAA8tgHzzBRQyFUcqoq2e5h1EDYWAemmppKPaCqpNFxDhcCYVu4dmdij1hJ7Q4RFSkAdk1ekSuFT5PWkT"
     )
@@ -896,5 +898,5 @@ async def mock_bot():
     print(result)
 
 
-if __name__ == "__main__":
+#if __name__ == "__main__":
     asyncio.run(mock_bot())

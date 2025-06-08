@@ -11,7 +11,7 @@ import asyncio
 from dotenv import load_dotenv  # type: ignore
 
 load_dotenv()
-BEARER_TOKEN = "AAAAAAAAAAAAAAAAAAAAADA%2F2QEAAAAAK6ET5SPdyvYphvuiDpBxhHs%2Fctk%3D5PskJkXhMLfxH7xScbF5kayEVjPAn0SBRiQ2l8KQx87ZEUTG02"
+BEARER_TOKEN = "AAAAAAAAAAAAAAAAAAAAADA%2F2QEAAAAAbdPtND6eKQ%2Fg%2F%2FwMkg1LgiSH1%2Bs%3DYO3SNao3wKaGFL5sCmtqn4d8c13K8DwHRvadTKD42AkR0ajw4D"
 if BEARER_TOKEN is None:
     print("Please set the BEARER_TOKEN environment variable.")
     exit(1)
