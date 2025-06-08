@@ -222,7 +222,7 @@ async def start_monitoring(context: ContextTypes.DEFAULT_TYPE):
         print("DEBUG - get_all_targets() →", all_targets)
         return all_targets
 
-    await monitor_users(get_all_targets, application)
+    await monitor_users(context, get_all_targets, application)
 
 
 async def start_unified_mention_system(context: ContextTypes.DEFAULT_TYPE):
