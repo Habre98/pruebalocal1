@@ -27,16 +27,16 @@ import tweepy  # type: ignore
 async def fetch_bot_x_id(context):
     try:
         # Our main account
-        xeroai_sol_x_id = "1907969641865162753"
+        xeroai_sol_x_id = "1930399200480768005"
 
         if xeroai_sol_x_id:
-            context.bot_data["xeroai_sol_user_id"] = xeroai_sol_x_id
+            context.bot_data["xeroAi_bot_user_id"] = xeroai_sol_x_id
             print(f"✅ ID del bot de X: {xeroai_sol_x_id}")
         else:
             print("❌ El ID del bot de X es incorrecto")
     except tweepy.TooManyRequests as e_rate_limit:
         print(
-            f"CRITICAL: Rate limit hit while fetching bot's own X ID (xeroai_sol) in x_utils.py: {e_rate_limit}. This may affect bot functionality."
+            f"CRITICAL: Rate limit hit while fetching bot's own X ID (xeroAi_bot) in x_utils.py: {e_rate_limit}. This may affect bot functionality."
         )
     except Exception as e:
         print(f"❌ Error fetching bot's X ID: {e}")
@@ -44,7 +44,7 @@ async def fetch_bot_x_id(context):
 
 async def start_mention_watcher(context):
     bot = context.bot
-    bot_x_id = context.bot_data.get("xeroai_sol_user_id")
+    bot_x_id = context.bot_data.get("xeroAi_bot_user_id")
     twitter_client = context.bot_data.get("twitter_client")
 
     if not twitter_client:
@@ -52,7 +52,7 @@ async def start_mention_watcher(context):
         return
 
     if not bot_x_id:
-        print("❌ No se encontró xeroai_sol_user_id en context.bot_data.")
+        print("❌ No se encontró xeroAi_bot_user_id en context.bot_data.")
         return
 
     print("🚀 Iniciando watcher de menciones con comando de vinculación")
